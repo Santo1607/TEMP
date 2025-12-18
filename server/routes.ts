@@ -23,6 +23,9 @@ const deviceLatestData = new Map<string, DeviceData>();
 const connectedClients = new Set<any>();
 let wss: any = null;
 
+// Map device IDs to patient IDs for tracking
+const deviceToPatientMap = new Map<string, string>();
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -52,7 +55,7 @@ export async function registerRoutes(
     
     connectedClients.add(websocket);
     
-    websocket.on('message', (data: Buffer) => {
+    websocket.on('message', async (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
         
@@ -77,8 +80,8 @@ export async function registerRoutes(
             timestamp: Date.now(),
           });
           
-          // Store in database for history
-          storeTemperatureReading(message.deviceId, message.ambientTemp, message.objectTemp);
+          // Store in database for history and trigger alerts
+          await storeTemperatureReading(message.deviceId, message.ambientTemp, message.objectTemp);
           
         } else if (message.type === 'handshake') {
           console.log(`[WebSocket] Handshake from ${message.deviceId}: ${message.deviceName}`);
@@ -159,9 +162,63 @@ export async function registerRoutes(
     });
   }
   
-  function storeTemperatureReading(deviceId: string, ambientTemp: number, objectTemp: number) {
-    // This would store in database - for now just log
-    console.log(`[DB] Temperature reading stored: ${deviceId} - Ambient: ${ambientTemp}°C, Object: ${objectTemp}°C`);
+  async function storeTemperatureReading(deviceId: string, ambientTemp: number, objectTemp: number) {
+    try {
+      // Get or assign patient to this device
+      let patientId = deviceToPatientMap.get(deviceId);
+      
+      if (!patientId) {
+        // Auto-assign device to first patient if not already mapped
+        const allPatients = await storage.getAllPatients();
+        if (allPatients.length > 0) {
+          patientId = allPatients[0].id;
+          deviceToPatientMap.set(deviceId, patientId);
+          console.log(`[Device Mapping] Assigned ${deviceId} to patient ${patientId}`);
+        } else {
+          console.warn(`[Alert] No patients available for device ${deviceId}`);
+          return;
+        }
+      }
+      
+      const patient = await storage.getPatient(patientId);
+      if (!patient) {
+        console.warn(`[Alert] Patient ${patientId} not found for device ${deviceId}`);
+        return;
+      }
+      
+      // Calculate risk level
+      const riskLevel = calculateRiskLevel(objectTemp, patient.thresholdMin, patient.thresholdMax);
+      
+      // Store temperature log
+      const tempLog = await storage.createTemperatureLog({
+        patientId,
+        tempC: objectTemp,
+        tempF: (objectTemp * 9/5) + 32,
+        riskLevel,
+      });
+      
+      console.log(`[DB] Temperature logged for ${patient.name}: ${objectTemp}°C (Risk: ${riskLevel})`);
+      
+      // Trigger alert if warning or critical
+      if (riskLevel !== 'normal') {
+        console.log(`[Alert] Triggering ${riskLevel} alert for ${patient.name}`);
+        await sendTemperatureAlert(patient, objectTemp, tempLog.tempF, riskLevel);
+        
+        // Broadcast alert to all connected WebSocket clients
+        broadcastToClients({
+          type: 'alert',
+          severity: riskLevel,
+          patientId,
+          patientName: patient.name,
+          temperature: objectTemp,
+          roomNumber: patient.roomNumber,
+          message: `${riskLevel.toUpperCase()} ALERT: ${patient.name} - Temperature ${objectTemp.toFixed(1)}°C`,
+          timestamp: Date.now(),
+        });
+      }
+    } catch (error) {
+      console.error(`[Alert Error] Failed to store temperature reading for ${deviceId}:`, error);
+    }
   }
 
   app.post("/api/auth/login", async (req: Request, res: Response) => {

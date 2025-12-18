@@ -14,6 +14,11 @@ interface TemperatureData {
 interface AlertMessage {
   type: string;
   deviceId?: string;
+  patientId?: string;
+  patientName?: string;
+  temperature?: number;
+  roomNumber?: string;
+  severity?: string;
   message?: string;
   timestamp: number;
   data?: TemperatureData;
@@ -237,22 +242,31 @@ export function TemperatureDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {alerts.map((alert, idx) => (
-                <div
-                  key={idx}
-                  className="text-xs p-2 bg-muted rounded flex justify-between items-start"
-                  data-testid={`activity-${idx}`}
-                >
-                  <span>
-                    {alert.type === "temperature-update"
-                      ? `Temperature reading: ${alert.data?.ambientTemp.toFixed(1)}°C (ambient)`
-                      : alert.message || "Alert received"}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {new Date(alert.timestamp).toLocaleTimeString()}
-                  </span>
-                </div>
-              ))}
+              {alerts.map((alert, idx) => {
+                const isAlert = alert.type === "alert";
+                const bgClass = isAlert
+                  ? alert.severity === "critical"
+                    ? "bg-red-100 dark:bg-red-900/30"
+                    : "bg-yellow-100 dark:bg-yellow-900/30"
+                  : "bg-muted";
+
+                return (
+                  <div
+                    key={idx}
+                    className={`text-xs p-2 ${bgClass} rounded flex justify-between items-start`}
+                    data-testid={`activity-${idx}`}
+                  >
+                    <span>
+                      {isAlert
+                        ? `${alert.severity?.toUpperCase()}: ${alert.patientName} - ${alert.temperature?.toFixed(1)}°C (Room ${alert.roomNumber})`
+                        : `Temperature reading: ${alert.data?.objectTemp.toFixed(1)}°C`}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {new Date(alert.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
