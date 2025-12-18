@@ -9,7 +9,7 @@ Selected Approach: **Healthcare Dashboard Design System** inspired by modern med
 - Instant data comprehension
 - Role-based visual hierarchy
 - Trust through consistency
-- Zero ambiguity in critical information
+- Zero ambiguity in critical information.
 
 ---
 
