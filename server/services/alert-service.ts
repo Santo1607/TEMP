@@ -1,11 +1,14 @@
 import type { Patient, Staff, RiskLevel } from "@shared/schema";
 import { storage } from "../storage";
+import { getSmsProvider, formatAlertMessage } from "./sms-provider";
 
 interface AlertRecipient {
   type: "doctor" | "nurse" | "guardian";
   name: string;
   phone: string;
 }
+
+const smsProvider = getSmsProvider();
 
 export async function sendTemperatureAlert(
   patient: Patient,
@@ -16,9 +19,11 @@ export async function sendTemperatureAlert(
   if (riskLevel === "normal") return;
 
   const recipients: AlertRecipient[] = [];
+  let doctor: Staff | undefined;
+  let nurse: Staff | undefined;
 
   if (patient.doctorId) {
-    const doctor = await storage.getStaff(patient.doctorId);
+    doctor = await storage.getStaff(patient.doctorId);
     if (doctor) {
       recipients.push({
         type: "doctor",
@@ -29,7 +34,7 @@ export async function sendTemperatureAlert(
   }
 
   if (patient.nurseId) {
-    const nurse = await storage.getStaff(patient.nurseId);
+    nurse = await storage.getStaff(patient.nurseId);
     if (nurse) {
       recipients.push({
         type: "nurse",
@@ -45,28 +50,11 @@ export async function sendTemperatureAlert(
     phone: patient.guardianPhone,
   });
 
-  const message = buildAlertMessage(patient, tempC, tempF, riskLevel);
+  const message = formatAlertMessage(patient, doctor, nurse, tempC, tempF, riskLevel);
 
   for (const recipient of recipients) {
     await sendSMS(patient, recipient, message, riskLevel);
   }
-}
-
-function buildAlertMessage(
-  patient: Patient,
-  tempC: number,
-  tempF: number,
-  riskLevel: RiskLevel
-): string {
-  const riskText = riskLevel === "critical" ? "CRITICAL" : "WARNING";
-  
-  return `[${riskText} ALERT] Hospital Temperature Monitor
-Patient: ${patient.name}
-Room: ${patient.roomNumber}, Floor: ${patient.floorNumber}, Block: ${patient.blockNumber}
-Condition: ${patient.disease}
-Temperature: ${tempC.toFixed(1)}°C / ${tempF.toFixed(1)}°F
-Status: ${riskText}
-Please respond immediately.`;
 }
 
 async function sendSMS(
@@ -79,9 +67,13 @@ async function sendSMS(
 
   try {
     console.log(`[SMS] Sending ${riskLevel} alert to ${recipient.type} (${recipient.name}): ${recipient.phone}`);
-    console.log(`[SMS] Message: ${message}`);
     
-    status = "sent";
+    const result = await smsProvider.sendSms(recipient.phone, message);
+    status = result.success ? "sent" : "failed";
+    
+    if (!result.success) {
+      console.error(`[SMS] Failed to send to ${recipient.phone}:`, result.error);
+    }
   } catch (error) {
     console.error(`[SMS] Failed to send to ${recipient.phone}:`, error);
     status = "failed";

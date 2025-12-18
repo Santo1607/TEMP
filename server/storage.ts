@@ -66,155 +66,66 @@ export class MemStorage implements IStorage {
 
   private seedData() {
     const adminId = randomUUID();
-    const doctor1Id = randomUUID();
-    const doctor2Id = randomUUID();
-    const nurse1Id = randomUUID();
-    const nurse2Id = randomUUID();
+    const doctorId = randomUUID();
+    const nurseId = randomUUID();
 
+    // Admin user
     this.staff.set(adminId, {
       id: adminId,
-      name: "Dr. Admin Singh",
+      name: "Dr. Admin",
       email: "admin@hospital.com",
       password: "admin123",
       role: "admin",
-      phone: "+1234567890",
+      phone: "+919876543210",
     });
 
-    this.staff.set(doctor1Id, {
-      id: doctor1Id,
-      name: "Dr. Sarah Johnson",
+    // Single doctor for the patient
+    this.staff.set(doctorId, {
+      id: doctorId,
+      name: "Dr. Rajesh Kumar",
       email: "doctor@hospital.com",
       password: "doctor123",
       role: "doctor",
-      phone: "+1234567891",
+      phone: "+919876543211",
     });
 
-    this.staff.set(doctor2Id, {
-      id: doctor2Id,
-      name: "Dr. Michael Chen",
-      email: "doctor2@hospital.com",
-      password: "doctor123",
-      role: "doctor",
-      phone: "+1234567892",
-    });
-
-    this.staff.set(nurse1Id, {
-      id: nurse1Id,
-      name: "Nurse Emily Davis",
+    // Single nurse for the patient
+    this.staff.set(nurseId, {
+      id: nurseId,
+      name: "Nurse Priya Sharma",
       email: "nurse@hospital.com",
       password: "nurse123",
       role: "nurse",
-      phone: "+1234567893",
+      phone: "+919876543212",
     });
 
-    this.staff.set(nurse2Id, {
-      id: nurse2Id,
-      name: "Nurse James Wilson",
-      email: "nurse2@hospital.com",
-      password: "nurse123",
-      role: "nurse",
-      phone: "+1234567894",
-    });
+    // Single patient with Indian phone numbers
+    const patientId = randomUUID();
 
-    const patient1Id = randomUUID();
-    const patient2Id = randomUUID();
-    const patient3Id = randomUUID();
-    const patient4Id = randomUUID();
-    const patient5Id = randomUUID();
-
-    this.patients.set(patient1Id, {
-      id: patient1Id,
-      name: "John Smith",
+    this.patients.set(patientId, {
+      id: patientId,
+      name: "Patient Name",
       roomNumber: "101",
       floorNumber: "1",
       blockNumber: "A",
-      disease: "Infection",
-      guardianName: "Mary Smith",
-      guardianPhone: "+1555123456",
-      doctorId: doctor1Id,
-      nurseId: nurse1Id,
-      thresholdMin: 36.0,
-      thresholdMax: 37.0,
-    });
-
-    this.patients.set(patient2Id, {
-      id: patient2Id,
-      name: "Emma Brown",
-      roomNumber: "205",
-      floorNumber: "2",
-      blockNumber: "B",
-      disease: "Post Surgery",
-      guardianName: "Robert Brown",
-      guardianPhone: "+1555234567",
-      doctorId: doctor1Id,
-      nurseId: nurse1Id,
-      thresholdMin: 36.5,
-      thresholdMax: 37.2,
-    });
-
-    this.patients.set(patient3Id, {
-      id: patient3Id,
-      name: "David Lee",
-      roomNumber: "302",
-      floorNumber: "3",
-      blockNumber: "A",
-      disease: "ICU",
-      guardianName: "Jennifer Lee",
-      guardianPhone: "+1555345678",
-      doctorId: doctor2Id,
-      nurseId: nurse2Id,
-      thresholdMin: 36.8,
-      thresholdMax: 37.0,
-    });
-
-    this.patients.set(patient4Id, {
-      id: patient4Id,
-      name: "Lisa Anderson",
-      roomNumber: "108",
-      floorNumber: "1",
-      blockNumber: "C",
       disease: "Normal",
-      guardianName: "Tom Anderson",
-      guardianPhone: "+1555456789",
-      doctorId: doctor2Id,
-      nurseId: nurse2Id,
+      guardianName: "Guardian Name",
+      guardianPhone: "+919876543213",
+      doctorId: doctorId,
+      nurseId: nurseId,
       thresholdMin: 36.5,
       thresholdMax: 37.5,
     });
 
-    this.patients.set(patient5Id, {
-      id: patient5Id,
-      name: "Michael Taylor",
-      roomNumber: "410",
-      floorNumber: "4",
-      blockNumber: "B",
-      disease: "Fever",
-      guardianName: "Susan Taylor",
-      guardianPhone: "+1555567890",
-      doctorId: doctor1Id,
-      nurseId: nurse1Id,
-      thresholdMin: 36.0,
-      thresholdMax: 38.0,
-    });
-
-    const temps = [
-      { patientId: patient1Id, tempC: 37.8, riskLevel: "warning" as RiskLevel },
-      { patientId: patient2Id, tempC: 36.8, riskLevel: "normal" as RiskLevel },
-      { patientId: patient3Id, tempC: 38.5, riskLevel: "critical" as RiskLevel },
-      { patientId: patient4Id, tempC: 36.6, riskLevel: "normal" as RiskLevel },
-      { patientId: patient5Id, tempC: 39.2, riskLevel: "critical" as RiskLevel },
-    ];
-
-    temps.forEach((t) => {
-      const logId = randomUUID();
-      this.temperatureLogs.set(logId, {
-        id: logId,
-        patientId: t.patientId,
-        tempC: t.tempC,
-        tempF: (t.tempC * 9) / 5 + 32,
-        riskLevel: t.riskLevel,
-        createdAt: new Date(),
-      });
+    // Initial temperature reading
+    const logId = randomUUID();
+    this.temperatureLogs.set(logId, {
+      id: logId,
+      patientId: patientId,
+      tempC: 36.8,
+      tempF: 98.24,
+      riskLevel: "normal",
+      createdAt: new Date(),
     });
   }
 
