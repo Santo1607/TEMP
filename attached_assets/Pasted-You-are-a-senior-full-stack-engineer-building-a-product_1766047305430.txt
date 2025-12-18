@@ -1,0 +1,124 @@
+You are a senior full-stack engineer building a production-grade Hospital Temperature Management Web Application.
+
+TECH STACK:
+- Frontend: React + Vite
+- Styling: Tailwind CSS (modern, clean hospital UI)
+- Backend: Node.js + Express
+- Database & Auth: Supabase (PostgreSQL + Row Level Security)
+- Realtime updates: Supabase Realtime
+- Notifications: Free SMS API (Fast2SMS or Textbelt – NO paid services)
+- Deployment: Replit
+
+SYSTEM OVERVIEW:
+Build a role-based temperature monitoring portal for hospitals with separate dashboards for:
+1. Admin / Management
+2. Doctors
+3. Nurses
+
+ROLE PERMISSIONS:
+- Admin:
+  - Full access
+  - Add/edit patients
+  - Add/edit doctors and nurses (Staff Management)
+  - View all temperature data
+  - Edit AI-generated temperature thresholds
+- Doctor:
+  - View only assigned patients
+  - View live temperature data
+  - Cannot edit thresholds or patient details
+- Nurse:
+  - View only assigned patients
+  - View live temperature data
+  - Cannot edit thresholds or patient details
+
+DATABASE SCHEMA (Supabase):
+1. patients:
+   - id (uuid)
+   - name
+   - room_number
+   - floor_number
+   - block_number
+   - disease
+   - guardian_name
+   - guardian_phone
+   - doctor_id
+   - nurse_id
+   - threshold_min
+   - threshold_max
+
+2. staff:
+   - id (uuid)
+   - name
+   - role (admin | doctor | nurse)
+   - phone
+
+3. temperature_logs:
+   - id (uuid)
+   - patient_id
+   - temp_c
+   - temp_f
+   - risk_level
+   - created_at
+
+FEATURES:
+- Live temperature monitoring (Celsius + Fahrenheit)
+- Data sent from ESP32 + MLX90614 sensor via REST API
+- Realtime dashboard updates using Supabase subscriptions
+- AI-based automatic threshold assignment based on disease
+- Admin override option for thresholds
+- Color-coded risk indicators:
+  - Green: Normal
+  - Yellow: Warning
+  - Red: Critical
+
+AI THRESHOLD LOGIC (Rule-Based, Free):
+- Normal: 36.5 – 37.5
+- Infection: 36.0 – 37.0
+- Post Surgery: 36.5 – 37.2
+- ICU: 36.8 – 37.0
+
+ALERT SYSTEM:
+- If temperature exceeds threshold:
+  - Automatically send SMS to:
+    - Assigned Doctor
+    - Assigned Nurse
+    - Guardian
+- SMS content must include:
+  - Patient name
+  - Room number
+  - Floor & block
+  - Disease
+  - Temperature (°C & °F)
+  - Risk level
+
+ESP32 INTEGRATION:
+- Create an API endpoint:
+  POST /api/temperature
+- Accept:
+  - patient_id
+  - temp_c
+  - temp_f
+- Store data in Supabase
+- Trigger alert logic automatically
+
+UI/UX REQUIREMENTS:
+- Professional hospital-grade UI
+- Dashboard cards
+- Smooth animations
+- Responsive layout
+- Clear role-based navigation
+- No clutter
+
+OUTPUT REQUIREMENTS:
+- Generate full folder structure
+- Clean, optimized, readable code
+- Supabase connection config
+- API routes
+- Realtime listeners
+- Alert service module
+- Basic authentication flow
+
+IMPORTANT:
+- Do NOT use paid APIs
+- Do NOT use complex ML libraries
+- Keep everything simple, stable, and hackathon-ready
