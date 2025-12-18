@@ -9,11 +9,160 @@ import {
   temperatureInputSchema,
 } from "@shared/schema";
 import { z } from "zod";
+import ws from "ws";
+
+// Store device data
+interface DeviceData {
+  deviceId: string;
+  ambientTemp: number;
+  objectTemp: number;
+  timestamp: number;
+}
+
+const deviceLatestData = new Map<string, DeviceData>();
+const connectedClients = new Set<any>();
+let wss: any = null;
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  // ============================================================================
+  // WebSocket Server Setup
+  // ============================================================================
+  
+  wss = new ws.Server({ noServer: true });
+  
+  httpServer.on('upgrade', (request, socket, head) => {
+    const pathname = request.url || '';
+    
+    if (pathname === '/ws/temperature') {
+      wss.handleUpgrade(request, socket, head, (websocket: any) => {
+        wss.emit('connection', websocket, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
+  
+  wss.on('connection', (websocket: any, request: any) => {
+    const clientId = `client-${Date.now()}`;
+    console.log(`[WebSocket] New connection: ${clientId}`);
+    
+    connectedClients.add(websocket);
+    
+    websocket.on('message', (data: Buffer) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        if (message.type === 'temperature') {
+          // Temperature data from ESP32
+          const deviceData: DeviceData = {
+            deviceId: message.deviceId,
+            ambientTemp: message.ambientTemp,
+            objectTemp: message.objectTemp,
+            timestamp: message.timestamp || Date.now(),
+          };
+          
+          // Store latest data
+          deviceLatestData.set(message.deviceId, deviceData);
+          
+          console.log(`[Temperature] ${message.deviceId}: Ambient=${message.ambientTemp}°C, Object=${message.objectTemp}°C`);
+          
+          // Broadcast to all connected clients
+          broadcastToClients({
+            type: 'temperature-update',
+            data: deviceData,
+            timestamp: Date.now(),
+          });
+          
+          // Store in database for history
+          storeTemperatureReading(message.deviceId, message.ambientTemp, message.objectTemp);
+          
+        } else if (message.type === 'handshake') {
+          console.log(`[WebSocket] Handshake from ${message.deviceId}: ${message.deviceName}`);
+          
+          websocket.send(JSON.stringify({
+            type: 'handshake-ack',
+            message: 'Welcome to Temperature Monitor',
+            timestamp: Date.now(),
+          }));
+        }
+      } catch (error) {
+        console.error('[WebSocket] Message parse error:', error);
+      }
+    });
+    
+    websocket.on('close', () => {
+      console.log(`[WebSocket] Client disconnected: ${clientId}`);
+      connectedClients.delete(websocket);
+    });
+    
+    websocket.on('error', (error: any) => {
+      console.error(`[WebSocket] Client error: ${error.message}`);
+      connectedClients.delete(websocket);
+    });
+  });
+  
+  // ============================================================================
+  // API Endpoints
+  // ============================================================================
+  
+  app.get("/api/temperature/latest", (req: Request, res: Response) => {
+    try {
+      const deviceId = req.query.deviceId as string | undefined;
+      
+      if (deviceId) {
+        const data = deviceLatestData.get(deviceId);
+        return res.json(data || { error: "Device not found" });
+      }
+      
+      // Return all devices
+      const allData = Array.from(deviceLatestData.values());
+      return res.json(allData);
+    } catch (error) {
+      console.error("Temperature latest error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/temperature/alert", (req: Request, res: Response) => {
+    try {
+      const { deviceId, alertMessage } = req.body;
+      
+      // Broadcast alert to all clients
+      broadcastToClients({
+        type: 'alert',
+        deviceId,
+        message: alertMessage,
+        timestamp: Date.now(),
+      });
+      
+      return res.json({ success: true, message: "Alert sent" });
+    } catch (error) {
+      console.error("Temperature alert error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  // ============================================================================
+  // Helper Functions
+  // ============================================================================
+  
+  function broadcastToClients(message: any) {
+    const json = JSON.stringify(message);
+    connectedClients.forEach((client) => {
+      if (client.readyState === 1) { // WebSocket.OPEN
+        client.send(json);
+      }
+    });
+  }
+  
+  function storeTemperatureReading(deviceId: string, ambientTemp: number, objectTemp: number) {
+    // This would store in database - for now just log
+    console.log(`[DB] Temperature reading stored: ${deviceId} - Ambient: ${ambientTemp}°C, Object: ${objectTemp}°C`);
+  }
 
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {

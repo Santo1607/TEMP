@@ -4,6 +4,7 @@ import { StatsCard } from "@/components/stats-card";
 import { PatientCard } from "@/components/patient-card";
 import { AlertBanner } from "@/components/alert-banner";
 import { EmptyState } from "@/components/empty-state";
+import { TemperatureDashboard } from "@/components/temperature-dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, AlertTriangle, AlertCircle, HeartPulse, Activity } from "lucide-react";
 import type { PatientWithDetails, DashboardStats } from "@shared/schema";
@@ -74,6 +75,12 @@ export default function DashboardPage() {
           Welcome back, {user?.name}. Here's an overview of patient temperature status.
         </p>
       </div>
+
+      {/* Real-time Temperature Monitoring */}
+      <section>
+        <h2 className="text-lg font-semibold mb-4">Real-time Temperature Monitoring</h2>
+        <TemperatureDashboard />
+      </section>
 
       {criticalPatients && criticalPatients.length > 0 && (
         <AlertBanner
