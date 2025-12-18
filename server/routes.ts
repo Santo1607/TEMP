@@ -9,7 +9,7 @@ import {
   temperatureInputSchema,
 } from "@shared/schema";
 import { z } from "zod";
-import ws from "ws";
+import { WebSocketServer } from "ws";
 
 // Store device data
 interface DeviceData {
@@ -32,7 +32,7 @@ export async function registerRoutes(
   // WebSocket Server Setup
   // ============================================================================
   
-  wss = new ws.Server({ noServer: true });
+  wss = new WebSocketServer({ noServer: true });
   
   httpServer.on('upgrade', (request, socket, head) => {
     const pathname = request.url || '';
